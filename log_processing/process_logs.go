@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 
 	"github.com/google/go-github/github"
@@ -52,8 +53,10 @@ func main() {
 	}
 
 	for _, entry := range logEntries {
-		author := getAuthor(entry.File, entry.Line)
-		fmt.Printf("Error in file %s at line %d by %s\n", entry.File, entry.Line, author)
+		baseFile := filepath.Base(entry.File)
+		finalPath := "hotel_booking/" + baseFile
+		author := getAuthor(finalPath, entry.Line)
+		fmt.Printf("Error in file %s at line %d by %s\n", finalPath, entry.Line, author)
 	}
 }
 

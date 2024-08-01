@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,16 +17,35 @@ import (
 )
 
 type LogEntry struct {
-	Level string `json:"level"`
-	Msg   string `json:"msg"`
-	File  string `json:"file"`
-	Line  int    `json:"line"`
+	Level  string `json:"level"`
+	Msg    string `json:"msg"`
+	File   string `json:"file"`
+	Line   int    `json:"line"`
+	Author string `json:"author"`
 }
 
 func main() {
+	http.HandleFunc("/errors", errorLogHandler)
+	log.Println("Starting server on :8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func errorLogHandler(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == http.MethodOptions {
+		return
+	}
+
+	log.Println("Processing error log request")
+
 	file, err := os.Open("app.log")
 	if err != nil {
-		log.Fatalf("Failed to open log file: %v", err)
+		http.Error(w, fmt.Sprintf("Failed to open log file: %v", err), http.StatusInternalServerError)
+		return
 	}
 	defer file.Close()
 
@@ -39,25 +59,24 @@ func main() {
 			continue
 		}
 		if entry.Level == "error" {
+			baseFile := filepath.Base(entry.File)
+			finalPath := "hotel_booking/" + baseFile
+			entry.Author = getAuthor(finalPath, entry.Line)
 			logEntries = append(logEntries, entry)
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Fatalf("Failed to scan log file: %v", err)
-	}
-
-	if len(logEntries) == 0 {
-		log.Println("No errors found in log file.")
+		http.Error(w, fmt.Sprintf("Failed to scan log file: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	for _, entry := range logEntries {
-		baseFile := filepath.Base(entry.File)
-		finalPath := "hotel_booking/" + baseFile
-		author := getAuthor(finalPath, entry.Line)
-		fmt.Printf("Error in file %s at line %d by %s\n", finalPath, entry.Line, author)
+	if len(logEntries) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
 	}
+
+	json.NewEncoder(w).Encode(logEntries)
 }
 
 func getAuthor(file string, line int) string {
@@ -65,13 +84,13 @@ func getAuthor(file string, line int) string {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("Failed to execute git blame: %v", err)
-		return "unknown1"
+		return "unknown"
 	}
 
 	re := regexp.MustCompile(`\((.+?)\s+\d{4}`)
 	match := re.FindStringSubmatch(string(output))
 	if len(match) < 2 {
-		return "unknown2"
+		return "unknown"
 	}
 	return match[1]
 }

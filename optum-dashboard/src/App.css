@@ -1,0 +1,40 @@
+.App {
+  text-align: center;
+}
+
+.navbar {
+  background-color: #333;
+  padding: 1rem;
+  color: white;
+}
+
+.navbar-brand {
+  font-size: 1.5rem;
+  color: orange;
+}
+
+.container {
+  margin: 2rem auto;
+  max-width: 800px;
+  text-align: left;
+}
+
+h1 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.error-grid {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.error-grid th, .error-grid td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.error-grid th {
+  background-color: #f2f2f2;
+  text-align: left;
+}
